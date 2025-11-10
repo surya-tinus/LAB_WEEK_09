@@ -1,10 +1,8 @@
 package com.example.lab_week_09
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-// import androidx.activity.enableEdgeToEdge // Tidak terpakai
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,11 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-// import androidx.compose.material3.Button // Diganti
 import androidx.compose.material3.MaterialTheme
-// import androidx.compose.material3.Scaffold // Tidak terpakai
 import androidx.compose.material3.Surface
-// import androidx.compose.material3.Text // Diganti
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
@@ -28,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -36,33 +30,31 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+// PERBAIKAN 2: Import Moshi
+import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
 import com.example.lab_week_09.ui.theme.OnBackgroundItemText
 import com.example.lab_week_09.ui.theme.OnBackgroundTitleText
 import com.example.lab_week_09.ui.theme.PrimaryTextButton
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
-
-//Previously we extend AppCompatActivity,
-//now we extend ComponentActivity
 class MainActivity : ComponentActivity() {
 
-    //Declare a data class called Student
+    // PERBAIKAN 2: Tambahkan anotasi @JsonClass agar Moshi bisa mengenalinya
+    @JsonClass(generateAdapter = true)
     data class Student(
         var name: String
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //Here, we use setContent instead of setContentView
         setContent {
-            //Here, we wrap our content with the theme
-            //You can check out the LAB_WEEK_09Theme inside Theme.kt
             LAB_WEEK_09Theme {
-                // A surface container using the 'background' color from the theme
                 Surface(
-                    //We use Modifier.fillMaxSize() to make the surface fill the whole screen
                     modifier = Modifier.fillMaxSize(),
-                    //We use MaterialTheme.colorScheme.background to get the background color
-                    //and set it as the color of the surface
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
@@ -75,31 +67,28 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-//Here, we create a composable function called App
-//This will be the root composable of the app
 @Composable
 fun App(navController: NavHostController) {
-    //Here, we use NavHost to create a navigation graph
     NavHost(
         navController = navController,
         startDestination = "home"
     ) {
-        //Here, we create a route called "home"
         composable("home") {
-            //Here, we pass a lambda function that navigates to "resultContent"
-            Home { navController.navigate(
-                "resultContent/?listData=$it")
+            Home { listDataJson ->
+                // Navigasi dengan string JSON
+                // Catatan: Navigasi akan otomatis URL-encode string ini
+                navController.navigate(
+                    "resultContent/?listData=$listDataJson"
+                )
             }
         }
-        //Here, we create a route called "resultContent"
         composable(
             "resultContent/?listData={listData}",
             arguments = listOf(navArgument("listData") {
-                type = NavType.StringType }
-            )
+                type = NavType.StringType
+            })
         ) {
-            //Here, we pass the value of the argument to the ResultContent composable
-            // PERBAIKAN: 'ResultContent' sekarang bisa dipanggil
+            // Navigasi akan otomatis URL-decode string JSON di sini
             ResultContent(
                 it.arguments?.getString("listData").orEmpty()
             )
@@ -119,25 +108,34 @@ fun Home(navigateFromHomeToResult: (String) -> Unit) {
         )
     }
 
-    // PERBAIKAN (Error 2): Tipe datanya adalah 'MutableState<Student>'
-    // Kita biarkan Kotlin menebaknya (type inference)
     val inputField = remember { mutableStateOf(MainActivity.Student("")) }
+
+    // PERBAIKAN 2: Siapkan Moshi untuk konversi
+    val moshi = remember {
+        Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    }
+    val listType = Types.newParameterizedType(List::class.java, MainActivity.Student::class.java)
+    val jsonAdapter: JsonAdapter<List<MainActivity.Student>> = remember { moshi.adapter(listType) }
 
 
     HomeContent(
         listData,
-        // PERBAIKAN: Kirim 'isinya' (.value)
         inputField.value,
-        // PERBAIKAN (Error 3): Ubah 'isinya' (.value)
         { input -> inputField.value = inputField.value.copy(name = input) },
-        // PERBAIKAN (Error 4):
+
+        // PERBAIKAN 1: Validasi string kosong
         {
-            // Tambahkan 'isinya' (.value)
-            listData.add(inputField.value)
-            // Reset 'isinya' (.value)
-            inputField.value = MainActivity.Student("")
+            if (inputField.value.name.isNotBlank()) {
+                listData.add(inputField.value)
+                inputField.value = MainActivity.Student("")
+            }
         },
-        { navigateFromHomeToResult(listData.toList().toString()) }
+
+        // PERBAIKAN 2: Konversi list ke JSON sebelum navigasi
+        {
+            val jsonString = jsonAdapter.toJson(listData.toList())
+            navigateFromHomeToResult(jsonString)
+        }
     )
 }
 
@@ -149,9 +147,7 @@ fun HomeContent(
     onInputValueChange: (String) -> Unit,
     onButtonClick: () -> Unit,
     navigateFromHomeToResult: () -> Unit
-
 ) {
-    //Here, we use LazyColumn to display a list of items lazily
     LazyColumn {
         item {
             Column(
@@ -185,7 +181,7 @@ fun HomeContent(
                     }
                     PrimaryTextButton(
                         text = stringResource(
-                            id = R.string.button_navigate // Pastikan string 'button_navigate' ada di strings.xml
+                            id = R.string.button_navigate
                         )
                     ) {
                         navigateFromHomeToResult()
@@ -204,24 +200,64 @@ fun HomeContent(
             }
         }
     }
-} // <-- Kurung tutup untuk HomeContent SEHARUSNYA DI SINI
+}
 
-// PERBAIKAN (Error 1): 'ResultContent' dipindah ke top-level
+// PERBAIKAN 2: 'ResultContent' di-update untuk parse JSON dan pakai LazyColumn
 @Composable
-fun ResultContent(listData: String) {
-    Column(
+fun ResultContent(listDataJson: String) {
+
+    // 1. Siapkan Moshi untuk parsing
+    val moshi = remember {
+        Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    }
+    val listType = Types.newParameterizedType(List::class.java, MainActivity.Student::class.java)
+    val jsonAdapter: JsonAdapter<List<MainActivity.Student>> = remember { moshi.adapter(listType) }
+
+    // 2. Parse JSON. Gunakan 'try-catch' untuk keamanan
+    val studentList: List<MainActivity.Student> = remember(listDataJson) {
+        try {
+            if (listDataJson.isNotBlank()) {
+                jsonAdapter.fromJson(listDataJson) ?: emptyList()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList() // Kembalikan list kosong jika JSON rusak
+        }
+    }
+
+    // 3. Tampilkan dengan LazyColumn
+    LazyColumn(
         modifier = Modifier
-            .padding(vertical = 4.dp)
+            .padding(16.dp)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        //Here, we call the OnBackgroundItemText UI Element
-        OnBackgroundItemText(text = listData)
+        item {
+            OnBackgroundTitleText(text = "Hasil List (dari JSON)")
+        }
+
+        if (studentList.isEmpty()) {
+            item {
+                OnBackgroundItemText(text = "Tidak ada data untuk ditampilkan.")
+            }
+        } else {
+            items(studentList) { student ->
+                Column(
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    OnBackgroundItemText(text = student.name)
+                }
+            }
+        }
     }
 }
 
 
-// PERBAIKAN (Error 5): 'PreviewHome' dipindah ke top-level
 @Preview(showBackground = true)
 @Composable
 fun PreviewHome() {
