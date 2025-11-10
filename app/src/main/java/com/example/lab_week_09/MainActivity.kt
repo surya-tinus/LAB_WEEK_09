@@ -28,6 +28,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
 import androidx.compose.ui.unit.dp
+import com.example.lab_week_09.ui.theme.OnBackgroundItemText
+import com.example.lab_week_09.ui.theme.OnBackgroundTitleText
+import com.example.lab_week_09.ui.theme.PrimaryTextButton
 
 //Previously we extend AppCompatActivity,
 //now we extend ComponentActivity
@@ -123,58 +126,63 @@ fun HomeContent(
         //Here, we use item to display an item inside the LazyColumn
         item {
             Column(
-                //... (komentar-komentar)
-                modifier = Modifier.padding(16.dp).fillMaxSize(),
-                //... (komentar-komentar)
-                horizontalAlignment = Alignment.CenterHorizontally
+                //Modifier.padding(16.dp) is used to add padding to the Column
+                //You can also use Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            //to add padding horizontally and vertically
+            //or Modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp)
+            //to add padding to each side
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize(),
+            //Alignment.CenterHorizontally is used to align the Column horizontally
+            //You can also use verticalArrangement = Arrangement.Center to align the Column vertically
+                    horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = stringResource(
-                    id = R.string.enter_item)
-                )
-                //Here, we use TextField to display a text input field
-                TextField(
-                    //Set the value of the input field
-                    value = inputField.name,
-                    //Set the keyboard type of the input field
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text
-                    ),
-                    //Set what happens when the value of the input field changes
-                    onValueChange = {
-                        //Here, we call the onInputValueChange lambda function
-                        //and pass the value of the input field as a parameter
-                        //This is so that we can update the value of the inputField
-                        onInputValueChange(it) // 'it' di sini sudah benar
-                    }
-                )
-                //Here, we use Button to display a button
-                //the onClick parameter is used to set what happens when the button is clicked
-                Button(onClick = {
-                    //Here, we call the onButtonClick lambda function
-                    //This is so that we can add the inputField value to the
-                    listData
-                    //and reset the value of the inputField
-                    onButtonClick()
-                }) {
-                    //Set the text of the button
-                    Text(text = stringResource(
-                        id = R.string.button_click)
-                    )
+            //Here, we call the OnBackgroundTitleText UI Element
+            OnBackgroundTitleText(text = stringResource(
+                id = R.string.enter_item)
+            )
+
+            //Here, we use TextField to display a text input field
+            TextField(
+                //Set the value of the input field
+                value = inputField.name,
+                //Set the keyboard type of the input field
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text
+                ),
+                //Set what happens when the value of the input field changes
+                onValueChange = {
+                    //Here, we call the onInputValueChange lambda function
+                    //and pass the value of the input field as a parameter
+                    //This is so that we can update the value of the inputField
+                    onInputValueChange(it)
                 }
+            )
+            //Here, we call the PrimaryTextButton UI Element
+            PrimaryTextButton(text = stringResource(
+                id = R.string.button_click)
+            ) {
+                onButtonClick()
             }
+        }
         }
         //Here, we use items to display a list of items inside the LazyColumn
         //This is the RecyclerView replacement
         //We pass the listData as a parameter
         items(listData) { item ->
             Column(
-                modifier = Modifier.padding(vertical = 4.dp).fillMaxSize(),
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = item.name)
+                //Here, we call the OnBackgroundItemText UI Element
+                OnBackgroundItemText(text = item.name)
             }
         }
     }
+
 }
 //Here, we create a preview function of the Home composable
 //This function is specifically used to show a preview of the Home composable
